@@ -46,7 +46,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mifos.core.designsystem.component.MifosCircularProgress
 import com.mifos.core.designsystem.component.MifosOutlinedTextField
@@ -58,21 +57,23 @@ import com.mifos.core.designsystem.theme.White
 import com.mifos.core.objects.noncore.IdentifierPayload
 import com.mifos.core.objects.noncore.IdentifierTemplate
 import com.mifos.feature.client.R
+import com.mifos.feature.client.clientIdentifiers.ClientIdentifiersUiState
+import com.mifos.feature.client.clientIdentifiers.ClientIdentifiersViewModel
 
 @Composable
 internal fun ClientIdentifiersDialogScreen(
     clientId: Int,
     onDismiss: () -> Unit,
     onIdentifierCreated: () -> Unit,
-    viewModel: ClientIdentifiersDialogViewModel = hiltViewModel(),
+    viewModel: ClientIdentifiersViewModel,
 ) {
-    val state by viewModel.clientIdentifierDialogUiState.collectAsStateWithLifecycle()
+    val state by viewModel.clientIdentifiersUiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadClientIdentifierTemplate(clientId)
     }
 
-    ClientIdentifiersDialogScreen(
+    ClientIdentifiersDialogContent(
         state = state,
         onDismiss = onDismiss,
         onIdentifierCreated = onIdentifierCreated,
@@ -86,8 +87,8 @@ internal fun ClientIdentifiersDialogScreen(
 }
 
 @Composable
-internal fun ClientIdentifiersDialogScreen(
-    state: ClientIdentifierDialogUiState,
+internal fun ClientIdentifiersDialogContent(
+    state: ClientIdentifiersUiState,
     onDismiss: () -> Unit,
     onIdentifierCreated: () -> Unit,
     onRetry: () -> Unit,
@@ -128,14 +129,14 @@ internal fun ClientIdentifiersDialogScreen(
                         }
                     }
                     when (state) {
-                        is ClientIdentifierDialogUiState.ClientIdentifierTemplate -> {
+                        is ClientIdentifiersUiState.ClientIdentifierTemplate -> {
                             ClientIdentifiersContent(
                                 clientIdentifierTemplate = state.identifierTemplate,
                                 onCreate = onCreate,
                             )
                         }
 
-                        is ClientIdentifierDialogUiState.Error -> MifosSweetError(
+                        is ClientIdentifiersUiState.Error -> MifosSweetError(
                             message = stringResource(
                                 id = state.message,
                             ),
@@ -143,7 +144,7 @@ internal fun ClientIdentifiersDialogScreen(
                             onRetry()
                         }
 
-                        is ClientIdentifierDialogUiState.IdentifierCreatedSuccessfully -> {
+                        is ClientIdentifiersUiState.IdentifierCreatedSuccessfully -> {
                             Toast.makeText(
                                 LocalContext.current,
                                 stringResource(id = R.string.feature_client_identifier_created_successfully),
@@ -152,7 +153,9 @@ internal fun ClientIdentifiersDialogScreen(
                             onIdentifierCreated()
                         }
 
-                        is ClientIdentifierDialogUiState.Loading -> MifosCircularProgress()
+                        is ClientIdentifiersUiState.Loading -> MifosCircularProgress()
+
+                        else -> {} // Handle other states if needed
                     }
                 }
             }
@@ -292,22 +295,22 @@ private fun ClientIdentifiersContent(
 }
 
 private class ClientIdentifiersDialogUiStatePreview :
-    PreviewParameterProvider<ClientIdentifierDialogUiState> {
+    PreviewParameterProvider<ClientIdentifiersUiState> {
 
-    override val values: Sequence<ClientIdentifierDialogUiState>
+    override val values: Sequence<ClientIdentifiersUiState>
         get() = sequenceOf(
-            ClientIdentifierDialogUiState.Loading,
-            ClientIdentifierDialogUiState.Error(R.string.feature_client_failed_to_load_client_identifiers),
-            ClientIdentifierDialogUiState.IdentifierCreatedSuccessfully,
+            ClientIdentifiersUiState.Loading,
+            ClientIdentifiersUiState.Error(R.string.feature_client_failed_to_load_client_identifiers),
+            ClientIdentifiersUiState.IdentifierCreatedSuccessfully,
         )
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun ClientIdentifiersDialogScreenPreview(
-    @PreviewParameter(ClientIdentifiersDialogUiStatePreview::class) state: ClientIdentifierDialogUiState,
+    @PreviewParameter(ClientIdentifiersDialogUiStatePreview::class) state: ClientIdentifiersUiState,
 ) {
-    ClientIdentifiersDialogScreen(
+    ClientIdentifiersDialogContent(
         state = state,
         onDismiss = {},
         onIdentifierCreated = {},

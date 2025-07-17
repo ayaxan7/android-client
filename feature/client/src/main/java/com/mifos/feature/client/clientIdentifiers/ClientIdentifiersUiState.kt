@@ -10,6 +10,7 @@
 package com.mifos.feature.client.clientIdentifiers
 
 import com.mifos.core.objects.noncore.Identifier
+import com.mifos.core.objects.noncore.IdentifierTemplate
 
 /**
  * Created by Aditya Gupta on 08/08/23.
@@ -23,4 +24,9 @@ sealed class ClientIdentifiersUiState {
     data class ClientIdentifiers(val identifiers: List<Identifier>) : ClientIdentifiersUiState()
 
     data object IdentifierDeletedSuccessfully : ClientIdentifiersUiState()
+
+    data class ClientIdentifierTemplate(val identifierTemplate: IdentifierTemplate) : ClientIdentifiersUiState()
+
+    data object IdentifierCreatedSuccessfully : ClientIdentifiersUiState()
 }
+

@@ -75,9 +75,19 @@ internal fun ClientIdentifiersScreen(
     val clientId by viewModel.clientId.collectAsStateWithLifecycle()
     val state by viewModel.clientIdentifiersUiState.collectAsStateWithLifecycle()
     val refreshState by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val dialogVisible by viewModel.dialogVisible.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadIdentifiers(clientId)
+    }
+
+    if (dialogVisible) {
+        ClientIdentifiersDialogScreen(
+            clientId = clientId,
+            onDismiss = { viewModel.hideCreateIdentifierDialog() },
+            viewModel = viewModel,
+            onIdentifierCreated = { viewModel.loadIdentifiers(clientId) }
+        )
     }
 
     ClientIdentifiersScreen(
@@ -94,8 +104,11 @@ internal fun ClientIdentifiersScreen(
         onRetry = {
             viewModel.loadIdentifiers(clientId)
         },
-        onIdentifierCreated = {
-            viewModel.loadIdentifiers(clientId)
+        onShowCreateIdentifierDialog = {
+            viewModel.showCreateIdentifierDialog()
+        },
+        onEditIdentifier = { identifier ->
+            viewModel.showEditIdentifierDialog(identifier)
         },
         onDocumentClicked = onDocumentClicked,
     )
@@ -110,7 +123,8 @@ internal fun ClientIdentifiersScreen(
     refreshState: Boolean,
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
-    onIdentifierCreated: () -> Unit,
+    onShowCreateIdentifierDialog: () -> Unit,
+    onEditIdentifier: (Identifier) -> Unit,
     onDocumentClicked: (Int) -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -118,18 +132,6 @@ internal fun ClientIdentifiersScreen(
         refreshing = refreshState,
         onRefresh = onRefresh,
     )
-    var showCreateIdentifierDialog by remember { mutableStateOf(false) }
-
-    if (showCreateIdentifierDialog) {
-        ClientIdentifiersDialogScreen(
-            clientId = clientId,
-            onDismiss = { showCreateIdentifierDialog = false },
-            onIdentifierCreated = {
-                showCreateIdentifierDialog = false
-                onIdentifierCreated()
-            },
-        )
-    }
 
     MifosScaffold(
         icon = MifosIcons.arrowBack,
@@ -137,9 +139,7 @@ internal fun ClientIdentifiersScreen(
         onBackPressed = onBackPressed,
         actions = {
             IconButton(
-                onClick = {
-                    showCreateIdentifierDialog = true
-                },
+                onClick = onShowCreateIdentifierDialog,
             ) {
                 Icon(
                     imageVector = MifosIcons.Add,
@@ -165,6 +165,7 @@ internal fun ClientIdentifiersScreen(
                                 identifiers = state.identifiers,
                                 onDeleteIdentifier = onDeleteIdentifier,
                                 onDocumentClicked = onDocumentClicked,
+                                onEditIdentifier = onEditIdentifier,
                             )
                         }
                     }
@@ -181,7 +182,17 @@ internal fun ClientIdentifiersScreen(
                         ).show()
                     }
 
+                    is ClientIdentifiersUiState.IdentifierCreatedSuccessfully -> {
+                        Toast.makeText(
+                            LocalContext.current,
+                            stringResource(id = R.string.feature_client_identifier_created_successfully),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+
                     is ClientIdentifiersUiState.Loading -> MifosCircularProgress()
+
+                    else -> {} // Handle other states if needed
                 }
 
                 PullRefreshIndicator(
@@ -199,6 +210,7 @@ private fun ClientIdentifiersContent(
     identifiers: List<Identifier>,
     onDeleteIdentifier: (Int) -> Unit,
     onDocumentClicked: (Int) -> Unit,
+    onEditIdentifier: (Identifier) -> Unit = {},
 ) {
     LazyColumn {
         items(identifiers) { identifier ->
@@ -206,6 +218,7 @@ private fun ClientIdentifiersContent(
                 identifier = identifier,
                 onDeleteIdentifier = onDeleteIdentifier,
                 onDocumentClicked = onDocumentClicked,
+                onEditIdentifier = onEditIdentifier,
             )
         }
     }
@@ -216,6 +229,7 @@ private fun ClientIdentifiersItem(
     identifier: Identifier,
     onDeleteIdentifier: (Int) -> Unit,
     onDocumentClicked: (Int) -> Unit,
+    onEditIdentifier: (Identifier) -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -262,6 +276,13 @@ private fun ClientIdentifiersItem(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                 ) {
+                    MifosMenuDropDownItem(
+                        option = stringResource(id = R.string.feature_client_update),
+                        onClick = {
+                            onEditIdentifier(identifier)
+                            showMenu = false
+                        },
+                    )
                     MifosMenuDropDownItem(
                         option = stringResource(id = R.string.feature_client_remove),
                         onClick = {
@@ -330,8 +351,9 @@ private fun ClientIdentifiersScreenPreview(
         refreshState = true,
         onRefresh = {},
         onRetry = {},
-        onIdentifierCreated = {},
+        onShowCreateIdentifierDialog = {},
         onDocumentClicked = {},
+        onEditIdentifier = {},
     )
 }
 
